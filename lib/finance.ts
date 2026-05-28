@@ -1,9 +1,9 @@
-import { CATEGORIES } from "@/lib/constants";
-import type { Expense, ExpenseCategory, MoneyLensData } from "@/lib/types";
+import { CATEGORIES, DEFAULT_ALLOCATION_TEMPLATE } from "@/lib/constants";
+import type { BudgetAllocation, Expense, ExpenseCategory, MoneyLensData } from "@/lib/types";
 
-export const currency = new Intl.NumberFormat("en-US", {
+export const currency = new Intl.NumberFormat("en-IN", {
   style: "currency",
-  currency: "USD",
+  currency: "INR",
   maximumFractionDigits: 0,
 });
 
@@ -36,10 +36,33 @@ export const getMonthlyTotals = (expenses: Expense[]) => {
     .map(([month, total]) => ({ month, total }));
 };
 
+export const getCurrentMonthExpense = (expenses: Expense[]) => {
+  const monthKey = new Date().toISOString().slice(0, 7);
+  return expenses
+    .filter((expense) => expense.date.startsWith(monthKey))
+    .reduce((sum, expense) => sum + expense.amount, 0);
+};
+
+export const getMonthlyBalance = (data: MoneyLensData) => data.monthlyBudget - getCurrentMonthExpense(data.expenses);
+
+export const withBudgetAmounts = (budget: number, allocations: BudgetAllocation[]): BudgetAllocation[] =>
+  allocations.map((allocation) => ({
+    ...allocation,
+    amount: Math.round((budget * allocation.percentage) / 100),
+  }));
+
+export const getDefaultAllocations = (budget: number) =>
+  withBudgetAmounts(budget, DEFAULT_ALLOCATION_TEMPLATE);
+
+export const getSavingsRate = (data: MoneyLensData) => {
+  if (data.monthlyBudget <= 0) return 0;
+  return Math.max(getMonthlyBalance(data), 0) / data.monthlyBudget;
+};
+
 export const getHealthScore = (data: MoneyLensData) => {
-  const totalExpenses = getTotalExpenses(data.expenses);
-  const balance = data.monthlyIncome - totalExpenses;
-  const savingsRate = data.monthlyIncome > 0 ? Math.max(balance, 0) / data.monthlyIncome : 0;
+  const totalExpenses = getCurrentMonthExpense(data.expenses);
+  const balance = data.monthlyBudget - totalExpenses;
+  const savingsRate = getSavingsRate(data);
 
   const monthly = getMonthlyTotals(data.expenses);
   const average = monthly.length
@@ -49,25 +72,22 @@ export const getHealthScore = (data: MoneyLensData) => {
     ? monthly.reduce((sum, item) => sum + (item.total - average) ** 2, 0) / monthly.length
     : 0;
   const stdDev = Math.sqrt(variance);
-  const consistency = average > 0 ? Math.max(0, 1 - stdDev / average) : 1;
+  const consistency = average > 0 ? Math.max(0, 1 - stdDev / average) : 0.7;
 
-  const categoryTotals = getCategoryTotals(data.expenses);
+  const categoryTotals = getCategoryTotals(
+    data.expenses.filter((expense) => expense.date.startsWith(new Date().toISOString().slice(0, 7))),
+  );
   const entertainmentRatio = totalExpenses ? categoryTotals.Entertainment / totalExpenses : 0;
   const subscriptionRatio = totalExpenses ? categoryTotals.Subscriptions / totalExpenses : 0;
 
-  let score = 45;
-  score += savingsRate * 35;
+  let score = 40;
+  score += savingsRate * 30;
   score += consistency * 20;
+  score += Math.min(15, (data.monthlyBudget > 0 ? Math.max(balance, 0) / data.monthlyBudget : 0) * 15);
 
-  if (balance < 0) {
-    score -= Math.min(25, Math.abs((balance / data.monthlyIncome) * 30));
-  }
-  if (entertainmentRatio > 0.2) {
-    score -= (entertainmentRatio - 0.2) * 70;
-  }
-  if (subscriptionRatio > 0.12) {
-    score -= (subscriptionRatio - 0.12) * 70;
-  }
+  if (balance < 0) score -= 25;
+  if (entertainmentRatio > 0.2) score -= (entertainmentRatio - 0.2) * 70;
+  if (subscriptionRatio > 0.12) score -= (subscriptionRatio - 0.12) * 70;
 
   return Math.max(0, Math.min(100, Math.round(score)));
 };
@@ -80,42 +100,53 @@ export const getHealthLabel = (score: number) => {
 };
 
 export const getInsights = (data: MoneyLensData): string[] => {
-  const totalExpenses = getTotalExpenses(data.expenses);
-  const categoryTotals = getCategoryTotals(data.expenses);
-  const balance = data.monthlyIncome - totalExpenses;
-  const savingsRate = data.monthlyIncome > 0 ? Math.max(balance, 0) / data.monthlyIncome : 0;
+  const monthlyExpenses = data.expenses.filter((expense) =>
+    expense.date.startsWith(new Date().toISOString().slice(0, 7)),
+  );
+  const totalExpenses = getTotalExpenses(monthlyExpenses);
+  const categoryTotals = getCategoryTotals(monthlyExpenses);
+  const balance = data.monthlyBudget - totalExpenses;
+  const savingsRate = data.monthlyBudget > 0 ? Math.max(balance, 0) / data.monthlyBudget : 0;
 
-  const recommendations: string[] = [];
+  const insights: string[] = [];
 
   const foodRatio = totalExpenses ? categoryTotals.Food / totalExpenses : 0;
   if (foodRatio > 0.3) {
-    recommendations.push(
-      "You are spending heavily on food. Reducing food delivery expenses may improve savings.",
-    );
+    insights.push("You are spending heavily on food delivery this month.");
   }
 
   const entertainmentRatio = totalExpenses ? categoryTotals.Entertainment / totalExpenses : 0;
   if (entertainmentRatio > 0.2) {
-    recommendations.push("Entertainment expenses are higher than recommended.");
+    insights.push("Entertainment expenses are higher than recommended.");
   }
 
   if (savingsRate < 0.1) {
-    recommendations.push("Your savings rate is below recommended levels.");
+    insights.push("Your savings rate is below healthy levels.");
   }
 
   const subscriptionsRatio = totalExpenses ? categoryTotals.Subscriptions / totalExpenses : 0;
   if (subscriptionsRatio > 0.15) {
-    recommendations.push("Your subscription spending is high. Review unused services this month.");
+    insights.push("Subscription costs are high. Cancel unused plans to recover budget.");
   }
 
-  if (categoryTotals.Education < 80) {
-    recommendations.push("Consider reserving a dedicated monthly amount for academic resources.");
+  if (data.smartDistributionEnabled) {
+    const entertainmentAllocation = data.allocations.find((item) => item.category === "Entertainment");
+    if (entertainmentAllocation && categoryTotals.Entertainment > entertainmentAllocation.amount) {
+      insights.push("Entertainment spend is above your smart allocation target.");
+    }
   }
 
-  if (recommendations.length < 3) {
-    recommendations.push("Try setting weekly spending caps per category to improve budget consistency.");
-    recommendations.push("Move a fixed amount into savings right after income arrives.");
+  if (insights.length < 3) {
+    insights.push("Great momentum: keep logging expenses weekly to improve forecast accuracy.");
+    insights.push("Set fixed contribution reminders for goals to accelerate savings progress.");
+    insights.push("Review top 3 expenses every weekend to stay on budget.");
   }
 
-  return recommendations.slice(0, 5);
+  return insights.slice(0, 5);
+};
+
+export const getGoalEtaMonths = (data: MoneyLensData, remainingAmount: number) => {
+  const monthlySavings = Math.max(getMonthlyBalance(data), 0);
+  if (monthlySavings <= 0) return null;
+  return Math.max(1, Math.ceil(remainingAmount / monthlySavings));
 };

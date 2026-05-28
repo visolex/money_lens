@@ -22,8 +22,31 @@ export type SavingsGoal = {
   currentAmount: number;
 };
 
+export type AllocationCategory = "Needs" | "Savings" | "Education" | "Entertainment" | "Emergency";
+
+export type BudgetAllocation = {
+  category: AllocationCategory;
+  percentage: number;
+  amount: number;
+};
+
+export type MonthlyReport = {
+  id: string;
+  generatedAt: string;
+  month: string;
+  totalExpenses: number;
+  highestCategory: ExpenseCategory | "None";
+  savingsPercentage: number;
+  budgetEfficiency: number;
+  financialScore: number;
+};
+
 export type MoneyLensData = {
-  monthlyIncome: number;
+  monthlyBudget: number;
+  hasOnboarded: boolean;
+  smartDistributionEnabled: boolean;
+  allocations: BudgetAllocation[];
   expenses: Expense[];
   goals: SavingsGoal[];
+  reports: MonthlyReport[];
 };
