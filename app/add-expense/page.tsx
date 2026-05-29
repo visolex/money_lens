@@ -2,10 +2,10 @@
 
 import { AppShell } from "@/components/app-shell";
 import { CATEGORIES } from "@/lib/constants";
-import { currency } from "@/lib/finance";
+import { currency, getCurrentMonthExpenses, getTotalExpenses } from "@/lib/finance";
 import { addExpense, deleteExpense, readData, updateExpense } from "@/lib/storage";
 import type { ExpenseCategory } from "@/lib/types";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const emptyForm = {
   amount: "",
@@ -17,16 +17,24 @@ const emptyForm = {
 export default function AddExpensePage() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expenses, setExpenses] = useState(() =>
-    readData()
-      .expenses.slice()
-      .sort((a, b) => b.date.localeCompare(a.date)),
+  const [data, setData] = useState(() => readData());
+
+  const expenses = useMemo(
+    () =>
+      data.expenses
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [data.expenses],
   );
+
+  const currentMonthSpend = getTotalExpenses(getCurrentMonthExpenses(data.expenses));
 
   const reset = () => {
     setForm(emptyForm);
     setEditingId(null);
   };
+
+  const refresh = () => setData(readData());
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +57,7 @@ export default function AddExpensePage() {
     }
 
     reset();
-    setExpenses(
-      readData()
-        .expenses.slice()
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    );
+    refresh();
   };
 
   return (
@@ -61,9 +65,13 @@ export default function AddExpensePage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Add Expense</h1>
 
+        <div className="rounded-xl border border-[#222222] bg-[#111111] p-4 text-sm text-[#A1A1AA]">
+          This month spend: <span className="text-[#FAFAFA]">{currency.format(currentMonthSpend)}</span>
+        </div>
+
         <form onSubmit={submit} className="grid gap-4 rounded-xl border border-[#222222] bg-[#111111] p-6 md:grid-cols-2">
           <label className="space-y-1 text-sm text-[#A1A1AA]">
-            Amount
+            Amount (₹)
             <input
               type="number"
               min="0"
@@ -133,7 +141,7 @@ export default function AddExpensePage() {
         <section className="rounded-xl border border-[#222222] bg-[#111111] p-6">
           <h2 className="text-lg font-semibold">Recent Expenses</h2>
           {expenses.length === 0 ? (
-            <p className="mt-3 text-sm text-[#A1A1AA]">No expenses yet. Start by adding one above.</p>
+            <p className="mt-3 text-sm text-[#A1A1AA]">No expenses added yet.</p>
           ) : (
             <ul className="mt-4 space-y-3">
               {expenses.map((expense) => (
@@ -166,11 +174,7 @@ export default function AddExpensePage() {
                         if (editingId === expense.id) {
                           reset();
                         }
-                        setExpenses(
-                          readData()
-                            .expenses.slice()
-                            .sort((a, b) => b.date.localeCompare(a.date)),
-                        );
+                        refresh();
                       }}
                       className="rounded-md border border-[#222222] px-3 py-1 text-xs text-[#D4D4D8]"
                     >

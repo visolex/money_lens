@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const features = [
-  "Expense tracking with category insights",
-  "Financial health score based on spending behavior",
-  "Rule-based AI recommendations for better saving",
-  "Savings goals and smart purchase decision advisor",
+  "Track every rupee with category-level intelligence",
+  "Get a realistic financial health score out of 100",
+  "Use rule-based AI insights without external APIs",
+  "Plan savings goals and evaluate purchases with confidence",
 ];
 
 export default function Home() {
@@ -12,11 +12,11 @@ export default function Home() {
     <div className="min-h-screen bg-[#0A0A0A] px-6 py-16 text-[#FAFAFA] md:px-10">
       <div className="mx-auto max-w-6xl">
         <header className="rounded-2xl border border-[#222222] bg-[#111111] p-10 md:p-14">
-          <p className="text-sm text-[#A1A1AA]">Smart Money Management System for Students</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">MoneyLens</h1>
+          <p className="text-sm text-[#A1A1AA]">Premium student finance platform for India</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">MoneyLens India</h1>
           <p className="mt-5 max-w-2xl text-base text-[#A1A1AA] md:text-lg">
-            Track expenses, analyze spending habits, improve savings, and make smarter financial
-            decisions.
+            Manage your monthly budget, expenses, subscriptions, savings goals, and purchase
+            decisions in ₹ with complete localStorage privacy.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -44,9 +44,18 @@ export default function Home() {
 
         <section className="mt-10 grid gap-4 md:grid-cols-3">
           {[
-            { title: "Benefits", body: "Develop healthier spending habits and improve long-term financial confidence." },
-            { title: "How It Works", body: "Store your data locally, visualize trends, and get smart recommendations instantly." },
-            { title: "Built for Students", body: "Designed around student budgets, recurring costs, and practical savings goals." },
+            {
+              title: "Localized for India",
+              body: "All finance metrics, onboarding, and reports are tuned for Indian student budgeting in ₹.",
+            },
+            {
+              title: "AI-like Intelligence",
+              body: "Rule-based advisor cards deliver practical decisions on spending, savings, and purchase timing.",
+            },
+            {
+              title: "Built for Evaluations",
+              body: "A polished fintech experience suitable for project reviews, demos, and startup-style showcases.",
+            },
           ].map((item) => (
             <div key={item.title} className="rounded-xl border border-[#222222] bg-[#111111] p-6">
               <h2 className="text-lg font-medium">{item.title}</h2>
@@ -56,7 +65,7 @@ export default function Home() {
         </section>
 
         <footer className="mt-14 border-t border-[#222222] py-6 text-sm text-[#A1A1AA]">
-          © {new Date().getFullYear()} MoneyLens. Built for smarter student finance decisions.
+          © {new Date().getFullYear()} MoneyLens India. Built for smarter student finance decisions.
         </footer>
       </div>
     </div>
