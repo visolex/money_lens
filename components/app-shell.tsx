@@ -27,13 +27,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
 
+      {open ? <button className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setOpen(false)} aria-label="Close navigation" /> : null}
+
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-[#222222] bg-[#111111] p-6 transition-transform duration-300 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <Link href="/" className="mb-8 block text-lg font-semibold tracking-tight text-[#FAFAFA]">
-          MoneyLens
+          MoneyLens India
         </Link>
         <nav className="space-y-2">
           {links.map((link) => {

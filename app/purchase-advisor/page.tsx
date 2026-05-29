@@ -1,14 +1,12 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell";
-import { currency, getTotalExpenses } from "@/lib/finance";
+import { currency, getPurchaseAdvice, getSavingsRate } from "@/lib/finance";
 import { readData } from "@/lib/storage";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-type Advice = {
-  canAfford: boolean;
-  remainingAfterPurchase: number;
-  recommendation: string;
+type Advice = ReturnType<typeof getPurchaseAdvice> & {
+  productName: string;
 };
 
 export default function PurchaseAdvisorPage() {
@@ -16,12 +14,8 @@ export default function PurchaseAdvisorPage() {
   const [productPrice, setProductPrice] = useState("");
   const [advice, setAdvice] = useState<Advice | null>(null);
 
-  const data = useMemo(() => readData(), []);
-  const currentBalance = data.monthlyIncome - getTotalExpenses(data.expenses);
-  const goalGap = data.goals.reduce(
-    (sum, goal) => sum + Math.max(goal.targetAmount - goal.currentAmount, 0),
-    0,
-  );
+  const data = readData();
+  const savingsRate = Math.round(getSavingsRate(data) * 100);
 
   return (
     <AppShell>
@@ -29,8 +23,8 @@ export default function PurchaseAdvisorPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Purchase Advisor</h1>
 
         <section className="rounded-xl border border-[#222222] bg-[#111111] p-6">
-          <p className="text-sm text-[#A1A1AA]">Current Balance: {currency.format(currentBalance)}</p>
-          <p className="text-sm text-[#A1A1AA]">Savings Goal Gap: {currency.format(goalGap)}</p>
+          <p className="text-sm text-[#A1A1AA]">Monthly Budget: {currency.format(data.monthlyBudget)}</p>
+          <p className="text-sm text-[#A1A1AA]">Current Savings Rate: {savingsRate}%</p>
 
           <form
             className="mt-4 grid gap-4 md:grid-cols-3"
@@ -41,20 +35,8 @@ export default function PurchaseAdvisorPage() {
                 return;
               }
 
-              const remainingAfterPurchase = currentBalance - price;
-              const canAfford = remainingAfterPurchase >= 0;
-              const savingsImpact = currentBalance > 0 ? Math.round((price / currentBalance) * 100) : 100;
-
-              let recommendation: string;
-              if (!canAfford) {
-                recommendation = `You cannot afford ${productName} right now. It exceeds your available balance.`;
-              } else if (remainingAfterPurchase < goalGap * 0.3) {
-                recommendation = `You can afford this purchase, but it will reduce your savings by ${savingsImpact}% and slow your goals.`;
-              } else {
-                recommendation = `You can afford this purchase with manageable impact on your monthly budget.`;
-              }
-
-              setAdvice({ canAfford, remainingAfterPurchase, recommendation });
+              const result = getPurchaseAdvice(data, price);
+              setAdvice({ ...result, productName: productName.trim() });
             }}
           >
             <input
@@ -81,19 +63,39 @@ export default function PurchaseAdvisorPage() {
         </section>
 
         {advice ? (
-          <section className="rounded-xl border border-[#222222] bg-[#111111] p-6">
-            <p className="text-sm text-[#A1A1AA]">Decision</p>
-            <h2 className="mt-1 text-xl font-semibold">
-              {advice.canAfford ? "Can Afford" : "Cannot Afford"}
-            </h2>
-            <p className="mt-3 text-sm text-[#D4D4D8]">
-              Remaining Balance After Purchase: {currency.format(advice.remainingAfterPurchase)}
-            </p>
-            <p className="mt-2 text-sm text-[#D4D4D8]">{advice.recommendation}</p>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-[#222222] bg-[#111111] p-5">
+              <p className="text-sm text-[#A1A1AA]">Risk Level</p>
+              <p className="mt-2 text-xl font-semibold">{advice.riskLevel}</p>
+            </div>
+            <div className="rounded-xl border border-[#222222] bg-[#111111] p-5">
+              <p className="text-sm text-[#A1A1AA]">Affordability Score</p>
+              <p className="mt-2 text-xl font-semibold">{advice.affordabilityScore}/100</p>
+            </div>
+            <div className="rounded-xl border border-[#222222] bg-[#111111] p-5">
+              <p className="text-sm text-[#A1A1AA]">Remaining Balance</p>
+              <p className="mt-2 text-xl font-semibold">{currency.format(advice.remainingBalance)}</p>
+            </div>
+            <div className="rounded-xl border border-[#222222] bg-[#111111] p-5">
+              <p className="text-sm text-[#A1A1AA]">Recovery Time Estimate</p>
+              <p className="mt-2 text-xl font-semibold">
+                {advice.recoveryMonths === null
+                  ? "Not predictable"
+                  : `${advice.recoveryMonths} month${advice.recoveryMonths > 1 ? "s" : ""}`}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#222222] bg-[#111111] p-6 md:col-span-2 xl:col-span-4">
+              <h2 className="text-lg font-semibold">{advice.productName}</h2>
+              <p className="mt-2 text-sm text-[#D4D4D8]">{advice.recommendation}</p>
+              <p className="mt-2 text-sm text-[#A1A1AA]">
+                This purchase will consume {advice.consumptionRatio}% of your monthly balance.
+              </p>
+            </div>
           </section>
         ) : (
           <section className="rounded-xl border border-[#222222] bg-[#111111] p-6 text-sm text-[#A1A1AA]">
-            Enter a product and amount to receive a smart recommendation.
+            Enter a product and amount to receive intelligent affordability guidance.
           </section>
         )}
       </div>

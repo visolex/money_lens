@@ -1,19 +1,31 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell";
-import { currency } from "@/lib/finance";
+import { currency, getGoalCompletionMonths, getSavingsRate } from "@/lib/finance";
 import { addGoal, readData, updateGoalAmount } from "@/lib/storage";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function SavingsGoalsPage() {
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
-  const [goals, setGoals] = useState(() => readData().goals);
+  const [data, setData] = useState(() => readData());
+
+  const goals = data.goals;
+  const monthlySavingsAmount = useMemo(
+    () => Math.round(data.monthlyBudget * getSavingsRate(data)),
+    [data],
+  );
+
+  const refresh = () => setData(readData());
 
   return (
     <AppShell>
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Savings Goals</h1>
+
+        <p className="rounded-xl border border-[#222222] bg-[#111111] p-4 text-sm text-[#A1A1AA]">
+          At your current saving rate, you are saving around {currency.format(monthlySavingsAmount)} per month.
+        </p>
 
         <form
           onSubmit={(e) => {
@@ -25,7 +37,7 @@ export default function SavingsGoalsPage() {
             addGoal({ name: name.trim(), targetAmount: target, currentAmount: 0 });
             setName("");
             setTargetAmount("");
-            setGoals(readData().goals);
+            refresh();
           }}
           className="grid gap-4 rounded-xl border border-[#222222] bg-[#111111] p-6 md:grid-cols-3"
         >
@@ -62,6 +74,7 @@ export default function SavingsGoalsPage() {
                 ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100))
                 : 0;
               const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
+              const months = getGoalCompletionMonths(goal, monthlySavingsAmount);
 
               return (
                 <div key={goal.id} className="rounded-xl border border-[#222222] bg-[#111111] p-6">
@@ -77,6 +90,13 @@ export default function SavingsGoalsPage() {
                     <p>Current: {currency.format(goal.currentAmount)}</p>
                     <p>Remaining: {currency.format(remaining)}</p>
                   </div>
+                  <p className="mt-3 text-sm text-[#D4D4D8]">
+                    {months === null
+                      ? "Estimated completion time: Add more monthly savings to predict timeline."
+                      : months === 0
+                        ? "Goal completed."
+                        : `Estimated completion time: ${months} month${months > 1 ? "s" : ""}.`}
+                  </p>
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <input
@@ -86,7 +106,7 @@ export default function SavingsGoalsPage() {
                       className="w-40 rounded-md border border-[#222222] bg-[#0A0A0A] px-3 py-2 text-sm outline-none transition focus:border-[#D4D4D8]"
                       onBlur={(e) => {
                         updateGoalAmount(goal.id, Number(e.target.value));
-                        setGoals(readData().goals);
+                        refresh();
                       }}
                     />
                     <span className="text-xs text-[#A1A1AA]">Update current amount</span>
