@@ -51,11 +51,18 @@ ChartJS.register(
 
 type HeatmapView = "weekly" | "monthly";
 
+const HEATMAP_THRESHOLDS = {
+  low: 50,
+  medium: 300,
+  high: 600,
+  peak: 1000,
+} as const;
+
 const getCellColor = (value: number) => {
-  if (value >= 1000) return "bg-[#E4E4E7]";
-  if (value >= 600) return "bg-[#A1A1AA]";
-  if (value >= 300) return "bg-[#71717A]";
-  if (value >= 50) return "bg-[#3F3F46]";
+  if (value >= HEATMAP_THRESHOLDS.peak) return "bg-[#E4E4E7]";
+  if (value >= HEATMAP_THRESHOLDS.high) return "bg-[#A1A1AA]";
+  if (value >= HEATMAP_THRESHOLDS.medium) return "bg-[#71717A]";
+  if (value >= HEATMAP_THRESHOLDS.low) return "bg-[#3F3F46]";
   return "bg-[#1A1A1A]";
 };
 
@@ -109,6 +116,7 @@ export default function DashboardPage() {
   const dailySpending = useMemo(() => getDailySpending(data.expenses), [data.expenses]);
   const forecast = useMemo(() => getSpendingForecast(data), [data]);
   const allocationPercentageTotal = data.allocations.reduce((sum, item) => sum + item.percentage, 0);
+  const daysToExceedBudget = Math.max(forecast.daysToExceedBudget ?? 0, 0);
 
   const heatmapDates = useMemo(() => buildHeatmapDates(heatmapView), [heatmapView]);
   const heatmapPeakDay = useMemo(() => {
@@ -261,8 +269,8 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-[#D4D4D8]">
                 At your current spending rate, you may exceed your monthly budget in{" "}
-                {Math.max(forecast.daysToExceedBudget ?? 0, 0)} day
-                {Math.max(forecast.daysToExceedBudget ?? 0, 0) === 1 ? "" : "s"}.
+                {daysToExceedBudget} day
+                {daysToExceedBudget === 1 ? "" : "s"}.
               </p>
             </div>
           ) : null}
@@ -331,10 +339,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-[#A1A1AA]">
-            <span className="rounded bg-[#1A1A1A] px-2 py-1">Low: ₹50+</span>
-            <span className="rounded bg-[#3F3F46] px-2 py-1">Medium: ₹300+</span>
-            <span className="rounded bg-[#71717A] px-2 py-1">High: ₹600+</span>
-            <span className="rounded bg-[#E4E4E7] px-2 py-1 text-[#111111]">Peak: ₹1000+</span>
+            <span className="rounded bg-[#1A1A1A] px-2 py-1">Low: ₹{HEATMAP_THRESHOLDS.low}+</span>
+            <span className="rounded bg-[#3F3F46] px-2 py-1">Medium: ₹{HEATMAP_THRESHOLDS.medium}+</span>
+            <span className="rounded bg-[#71717A] px-2 py-1">High: ₹{HEATMAP_THRESHOLDS.high}+</span>
+            <span className="rounded bg-[#E4E4E7] px-2 py-1 text-[#111111]">Peak: ₹{HEATMAP_THRESHOLDS.peak}+</span>
           </div>
         </SectionCard>
 
