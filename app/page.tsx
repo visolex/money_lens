@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 
 const features = [
   "Track every rupee with category-level intelligence",
@@ -12,8 +13,9 @@ export default function Home() {
     <div className="min-h-screen bg-[#0A0A0A] px-6 py-16 text-[#FAFAFA] md:px-10">
       <div className="mx-auto max-w-6xl">
         <header className="rounded-2xl border border-[#222222] bg-[#111111] p-10 md:p-14">
+          <BrandLogo className="mb-6" iconClassName="h-11 w-11" textClassName="text-2xl font-semibold tracking-tight" />
           <p className="text-sm text-[#A1A1AA]">Premium student finance platform for India</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">MoneyLens India</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">Your personal student finance assistant</h1>
           <p className="mt-5 max-w-2xl text-base text-[#A1A1AA] md:text-lg">
             Manage your monthly budget, expenses, subscriptions, savings goals, and purchase
             decisions in ₹ with complete localStorage privacy.
@@ -65,7 +67,7 @@ export default function Home() {
         </section>
 
         <footer className="mt-14 border-t border-[#222222] py-6 text-sm text-[#A1A1AA]">
-          © {new Date().getFullYear()} MoneyLens India. Built for smarter student finance decisions.
+          © {new Date().getFullYear()} MoneyLens. Built for smarter student finance decisions.
         </footer>
       </div>
     </div>

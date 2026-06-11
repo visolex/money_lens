@@ -222,3 +222,45 @@ export const getPurchaseAdvice = (data: MoneyLensData, price: number) => {
     recoveryMonths,
   };
 };
+
+export const getSpendingForecast = (data: MoneyLensData) => {
+  const now = new Date();
+  const monthExpenses = getCurrentMonthExpenses(data.expenses);
+  const currentSpending = getTotalExpenses(monthExpenses) + getSubscriptionMonthlyCost(data);
+  const dayOfMonth = Math.max(now.getDate(), 1);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysRemaining = Math.max(daysInMonth - dayOfMonth, 0);
+  const averageDailySpending = dayOfMonth > 0 ? getTotalExpenses(monthExpenses) / dayOfMonth : 0;
+  const predictedMonthEndSpending =
+    averageDailySpending * daysInMonth + getSubscriptionMonthlyCost(data);
+  const predictedMonthEndBalance = data.monthlyBudget - predictedMonthEndSpending;
+  const remainingBudget = data.monthlyBudget - currentSpending;
+  const idealPacedSpending = (data.monthlyBudget / daysInMonth) * dayOfMonth;
+  const paceDelta = getTotalExpenses(monthExpenses) - idealPacedSpending;
+  const daysToExceedBudget =
+    averageDailySpending > 0 && remainingBudget < 0
+      ? 0
+      : averageDailySpending > 0
+        ? Math.ceil(remainingBudget / averageDailySpending)
+        : null;
+
+  return {
+    currentSpending,
+    averageDailySpending,
+    remainingBudget,
+    predictedMonthEndBalance,
+    predictedMonthEndSpending,
+    daysRemaining,
+    paceDelta,
+    daysToExceedBudget,
+    isLikelyToExceed: predictedMonthEndBalance < 0,
+  };
+};
+
+export const getDailySpending = (expenses: Expense[]) => {
+  const totals = new Map<string, number>();
+  expenses.forEach((expense) => {
+    totals.set(expense.date, (totals.get(expense.date) ?? 0) + expense.amount);
+  });
+  return totals;
+};
