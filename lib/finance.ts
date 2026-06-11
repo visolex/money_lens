@@ -227,7 +227,7 @@ export const getSpendingForecast = (data: MoneyLensData) => {
   const now = new Date();
   const monthExpenses = getCurrentMonthExpenses(data.expenses);
   const currentSpending = getTotalExpenses(monthExpenses) + getSubscriptionMonthlyCost(data);
-  const dayOfMonth = Math.max(now.getDate(), 1);
+  const dayOfMonth = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysRemaining = Math.max(daysInMonth - dayOfMonth, 0);
   const averageDailySpending = dayOfMonth > 0 ? getTotalExpenses(monthExpenses) / dayOfMonth : 0;

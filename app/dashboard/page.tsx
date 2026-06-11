@@ -58,6 +58,8 @@ const HEATMAP_THRESHOLDS = {
   peak: 1000,
 } as const;
 
+const WEEKLY_VIEW_TOTAL_DAYS = 56;
+
 const getCellColor = (value: number) => {
   if (value >= HEATMAP_THRESHOLDS.peak) return "bg-[#E4E4E7]";
   if (value >= HEATMAP_THRESHOLDS.high) return "bg-[#A1A1AA]";
@@ -79,8 +81,8 @@ const buildHeatmapDates = (view: HeatmapView) => {
   }
 
   const start = new Date(today);
-  start.setDate(today.getDate() - 55);
-  return Array.from({ length: 56 }, (_, i) => {
+  start.setDate(today.getDate() - (WEEKLY_VIEW_TOTAL_DAYS - 1));
+  return Array.from({ length: WEEKLY_VIEW_TOTAL_DAYS }, (_, i) => {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
     return date;
@@ -117,7 +119,7 @@ export default function DashboardPage() {
     if (!first || !last) return new Map<string, number>();
     return getDailySpending(data.expenses, { startDate: first, endDate: last });
   }, [data.expenses, heatmapDates]);
-  const daysUntilBudgetExceeded = Math.max(forecast.daysToExceedBudget ?? 0, 0);
+  const daysUntilBudgetExceeded = forecast.daysToExceedBudget ?? 0;
   const heatmapPeakDay = useMemo(() => {
     const entries = [...dailySpending.entries()].sort(([, a], [, b]) => b - a);
     return entries[0] ?? null;
@@ -230,7 +232,7 @@ export default function DashboardPage() {
             {[
               { label: "Current Budget", value: currency.format(data.monthlyBudget) },
               { label: "Current Spending", value: currency.format(forecast.currentSpending) },
-              { label: "Average Daily Spending", value: `${currency.format(Math.round(forecast.averageDailySpending))}/day` },
+              { label: "Average Daily Spending", value: `${currency.format(Math.round(forecast.averageDailySpending))} /day` },
               { label: "Predicted Month-End Balance", value: currency.format(Math.round(forecast.predictedMonthEndBalance)) },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
