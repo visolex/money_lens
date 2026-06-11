@@ -257,9 +257,18 @@ export const getSpendingForecast = (data: MoneyLensData) => {
   };
 };
 
-export const getDailySpending = (expenses: Expense[]) => {
+export const getDailySpending = (
+  expenses: Expense[],
+  range?: {
+    startDate: string;
+    endDate: string;
+  },
+) => {
   const totals = new Map<string, number>();
   expenses.forEach((expense) => {
+    if (range && (expense.date < range.startDate || expense.date > range.endDate)) {
+      return;
+    }
     totals.set(expense.date, (totals.get(expense.date) ?? 0) + expense.amount);
   });
   return totals;

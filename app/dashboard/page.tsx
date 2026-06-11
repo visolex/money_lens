@@ -37,7 +37,7 @@ import {
   setSmartBudgetEnabled,
   updateAllocation,
 } from "@/lib/storage";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 ChartJS.register(
   ArcElement,
@@ -96,14 +96,8 @@ export default function DashboardPage() {
   const [heatmapView, setHeatmapView] = useState<HeatmapView>("monthly");
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editedBudget, setEditedBudget] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
 
   const refresh = () => setData(readData());
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsLoading(false), 250);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   const monthExpensesList = useMemo(() => getCurrentMonthExpenses(data.expenses), [data.expenses]);
   const totalExpenses = useMemo(() => getTotalExpenses(monthExpensesList), [monthExpensesList]);
@@ -113,12 +107,17 @@ export default function DashboardPage() {
   const insights = getInsights(data);
   const categories = getCategoryTotals(monthExpensesList);
   const monthly = getMonthlyTotals(data.expenses);
-  const dailySpending = useMemo(() => getDailySpending(data.expenses), [data.expenses]);
   const forecast = useMemo(() => getSpendingForecast(data), [data]);
   const allocationPercentageTotal = data.allocations.reduce((sum, item) => sum + item.percentage, 0);
-  const daysToExceedBudget = Math.max(forecast.daysToExceedBudget ?? 0, 0);
 
   const heatmapDates = useMemo(() => buildHeatmapDates(heatmapView), [heatmapView]);
+  const dailySpending = useMemo(() => {
+    const first = heatmapDates[0]?.toISOString().slice(0, 10);
+    const last = heatmapDates[heatmapDates.length - 1]?.toISOString().slice(0, 10);
+    if (!first || !last) return new Map<string, number>();
+    return getDailySpending(data.expenses, { startDate: first, endDate: last });
+  }, [data.expenses, heatmapDates]);
+  const daysUntilBudgetExceeded = Math.max(forecast.daysToExceedBudget ?? 0, 0);
   const heatmapPeakDay = useMemo(() => {
     const entries = [...dailySpending.entries()].sort(([, a], [, b]) => b - a);
     return entries[0] ?? null;
@@ -209,30 +208,22 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-        {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-24 animate-pulse rounded-xl border border-[#222222] bg-[#111111]" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Monthly Budget", value: currency.format(data.monthlyBudget) },
-              { label: "This Month Expenses", value: currency.format(totalExpenses) },
-              { label: "Monthly Subscriptions", value: currency.format(totalSubscriptions) },
-              { label: "Remaining Balance", value: currency.format(remaining) },
-            ].map((card) => (
-              <div
-                key={card.label}
-                className="rounded-xl border border-[#222222] bg-[#111111] p-5 transition-all hover:-translate-y-0.5 hover:border-[#3A3A3A]"
-              >
-                <p className="text-sm text-[#A1A1AA]">{card.label}</p>
-                <p className="mt-2 text-xl font-semibold">{card.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Monthly Budget", value: currency.format(data.monthlyBudget) },
+            { label: "This Month Expenses", value: currency.format(totalExpenses) },
+            { label: "Monthly Subscriptions", value: currency.format(totalSubscriptions) },
+            { label: "Remaining Balance", value: currency.format(remaining) },
+          ].map((card) => (
+            <div
+              key={card.label}
+              className="rounded-xl border border-[#222222] bg-[#111111] p-5 transition-all hover:-translate-y-0.5 hover:border-[#3A3A3A]"
+            >
+              <p className="text-sm text-[#A1A1AA]">{card.label}</p>
+              <p className="mt-2 text-xl font-semibold">{card.value}</p>
+            </div>
+          ))}
+        </div>
 
         <SectionCard title="Spending Forecast" subtitle="Intelligent prediction based on current monthly behavior">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -269,8 +260,8 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-[#D4D4D8]">
                 At your current spending rate, you may exceed your monthly budget in{" "}
-                {daysToExceedBudget} day
-                {daysToExceedBudget === 1 ? "" : "s"}.
+                {daysUntilBudgetExceeded} day
+                {daysUntilBudgetExceeded === 1 ? "" : "s"}.
               </p>
             </div>
           ) : null}
