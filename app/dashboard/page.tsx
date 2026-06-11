@@ -20,7 +20,6 @@ import {
   getBudgetEfficiency,
   getCategoryTotals,
   getCurrentMonthExpenses,
-  getDailySpending,
   getHealthLabel,
   getHealthScore,
   getInsights,
@@ -49,53 +48,12 @@ ChartJS.register(
   PointElement,
 );
 
-type HeatmapView = "weekly" | "monthly";
-
-const HEATMAP_THRESHOLDS = {
-  low: 50,
-  medium: 300,
-  high: 600,
-  peak: 1000,
-} as const;
-
-const WEEKLY_VIEW_TOTAL_DAYS = 56;
-
-const getCellColor = (value: number) => {
-  if (value >= HEATMAP_THRESHOLDS.peak) return "bg-[#E4E4E7]";
-  if (value >= HEATMAP_THRESHOLDS.high) return "bg-[#A1A1AA]";
-  if (value >= HEATMAP_THRESHOLDS.medium) return "bg-[#71717A]";
-  if (value >= HEATMAP_THRESHOLDS.low) return "bg-[#3F3F46]";
-  return "bg-[#1A1A1A]";
-};
-
-const buildHeatmapDates = (view: HeatmapView) => {
-  const today = new Date();
-  if (view === "monthly") {
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const date = new Date(monthStart);
-      date.setDate(monthStart.getDate() + i);
-      return date;
-    });
-  }
-
-  const start = new Date(today);
-  start.setDate(today.getDate() - (WEEKLY_VIEW_TOTAL_DAYS - 1));
-  return Array.from({ length: WEEKLY_VIEW_TOTAL_DAYS }, (_, i) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
-    return date;
-  });
-};
-
 export default function DashboardPage() {
   const [data, setData] = useState(() => readData());
   const [setupBudget, setSetupBudget] = useState("");
   const [setupSmart, setSetupSmart] = useState(true);
   const [subscriptionName, setSubscriptionName] = useState("");
   const [subscriptionMonthly, setSubscriptionMonthly] = useState("");
-  const [heatmapView, setHeatmapView] = useState<HeatmapView>("monthly");
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editedBudget, setEditedBudget] = useState("");
 
@@ -111,19 +69,7 @@ export default function DashboardPage() {
   const monthly = getMonthlyTotals(data.expenses);
   const forecast = useMemo(() => getSpendingForecast(data), [data]);
   const allocationPercentageTotal = data.allocations.reduce((sum, item) => sum + item.percentage, 0);
-
-  const heatmapDates = useMemo(() => buildHeatmapDates(heatmapView), [heatmapView]);
-  const dailySpending = useMemo(() => {
-    const first = heatmapDates[0]?.toISOString().slice(0, 10);
-    const last = heatmapDates[heatmapDates.length - 1]?.toISOString().slice(0, 10);
-    if (!first || !last) return new Map<string, number>();
-    return getDailySpending(data.expenses, { startDate: first, endDate: last });
-  }, [data.expenses, heatmapDates]);
   const daysUntilBudgetExceeded = forecast.daysToExceedBudget ?? 0;
-  const heatmapPeakDay = useMemo(() => {
-    const entries = [...dailySpending.entries()].sort(([, a], [, b]) => b - a);
-    return entries[0] ?? null;
-  }, [dailySpending]);
   const emptyCharts = monthExpensesList.length === 0;
 
   return (
@@ -288,56 +234,6 @@ export default function DashboardPage() {
             </button>
           </SectionCard>
         </div>
-
-        <SectionCard title="Expense Heatmap" subtitle="Visualize spending intensity by date">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-md border border-[#2A2A2A] bg-[#151515] p-1 text-sm">
-              <button
-                onClick={() => setHeatmapView("weekly")}
-                className={`rounded px-3 py-1 transition ${
-                  heatmapView === "weekly" ? "bg-[#262626] text-[#FAFAFA]" : "text-[#A1A1AA] hover:text-[#FAFAFA]"
-                }`}
-              >
-                Weekly view
-              </button>
-              <button
-                onClick={() => setHeatmapView("monthly")}
-                className={`rounded px-3 py-1 transition ${
-                  heatmapView === "monthly" ? "bg-[#262626] text-[#FAFAFA]" : "text-[#A1A1AA] hover:text-[#FAFAFA]"
-                }`}
-              >
-                Monthly view
-              </button>
-            </div>
-            <div className="text-sm text-[#A1A1AA]">
-              Peak day:{" "}
-              {heatmapPeakDay
-                ? `${heatmapPeakDay[0]} (${currency.format(Math.round(heatmapPeakDay[1]))})`
-                : "No spending data yet"}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-2">
-            {heatmapDates.map((date) => {
-              const key = date.toISOString().slice(0, 10);
-              const value = dailySpending.get(key) ?? 0;
-              return (
-                <div
-                  key={key}
-                  title={`${key}: ${currency.format(Math.round(value))}`}
-                  className={`h-8 rounded-md border border-[#2A2A2A] transition hover:scale-105 ${getCellColor(value)}`}
-                />
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3 text-xs text-[#A1A1AA]">
-            <span className="rounded bg-[#1A1A1A] px-2 py-1">Low: ₹{HEATMAP_THRESHOLDS.low}+</span>
-            <span className="rounded bg-[#3F3F46] px-2 py-1">Medium: ₹{HEATMAP_THRESHOLDS.medium}+</span>
-            <span className="rounded bg-[#71717A] px-2 py-1">High: ₹{HEATMAP_THRESHOLDS.high}+</span>
-            <span className="rounded bg-[#E4E4E7] px-2 py-1 text-[#111111]">Peak: ₹{HEATMAP_THRESHOLDS.peak}+</span>
-          </div>
-        </SectionCard>
 
         <SectionCard title="Smart Budget Distribution" subtitle="Enable, tweak, and track your recommended allocation model">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
