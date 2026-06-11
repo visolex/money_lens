@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
@@ -34,8 +35,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Link href="/" className="mb-8 block text-lg font-semibold tracking-tight text-[#FAFAFA]">
-          MoneyLens India
+        <Link href="/" className="mb-8 block text-[#FAFAFA]">
+          <div className="hidden sm:block">
+            <BrandLogo />
+          </div>
+          <div className="sm:hidden">
+            <BrandLogo showWordmark={false} />
+          </div>
         </Link>
         <nav className="space-y-2">
           {links.map((link) => {

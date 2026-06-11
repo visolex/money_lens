@@ -195,6 +195,29 @@ export const updateGoalAmount = (id: string, currentAmount: number) => {
   }));
 };
 
+export const updateGoal = (id: string, goal: Omit<SavingsGoal, "id">) => {
+  updateData((data) => ({
+    ...data,
+    goals: data.goals.map((item) =>
+      item.id === id
+        ? {
+            ...goal,
+            id,
+            targetAmount: Math.max(0, goal.targetAmount),
+            currentAmount: Math.max(0, goal.currentAmount),
+          }
+        : item,
+    ),
+  }));
+};
+
+export const deleteGoal = (id: string) => {
+  updateData((data) => ({
+    ...data,
+    goals: data.goals.filter((goal) => goal.id !== id),
+  }));
+};
+
 export const addSubscription = (subscription: Omit<Subscription, "id">) => {
   updateData((data) => ({
     ...data,

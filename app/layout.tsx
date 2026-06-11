@@ -4,8 +4,8 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MoneyLens India",
-  description: "AI-inspired student finance management for Indian users",
+  title: "MoneyLens",
+  description: "Intelligent student finance assistant for budgets, forecasting, and savings",
 };
 
 export default function RootLayout({
